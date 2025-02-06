@@ -1,6 +1,6 @@
 # ==============================================================================================================
-# 作成者:dimebag29 作成日:2023年10月24日 バージョン:v0.3
-# (Author:dimebag29 Creation date:October 24, 2023 Version:v0.3)
+# 作成者:dimebag29 作成日:2025年2月6日 バージョン:v0.4
+# (Author:dimebag29 Creation date:February 6, 2025 Version:v0.4)
 #
 # このプログラムのライセンスはLGPLv3です。pynputライブラリのライセンスを継承しています。
 # (This program is licensed to LGPLv3. Inherits the license of the pynput library.)
@@ -51,7 +51,7 @@ def Push_Exit():
 def Push_PowerSaveOn():
     global Icon                                                                 # 関数内で変数の値を変更したい場合はglobalにする
     Icon.icon = GpuPowerSaveOnIcon                                              # タスクトレイアイコン変更
-    cmd = MasterBatPath + " " + str(MinimumPowerLimit)                          # コマンド生成。batの引数に電力制限下限を指定
+    cmd = MasterBatPath + " " + str(CustomPowerSaveValue)                       # コマンド生成。batの引数に電力制限下限を指定
     subprocess.run(cmd, startupinfo=StartupInfo)                                # コマンド実行
 
 # 電力制限OFFボタンが押された時の動作
@@ -188,7 +188,7 @@ if 2 < ProcessHitCount:
     sys.exit(0)
 
 
-# ============================================= batファイルの生成 ===============================================
+# ============================================== ファイルの生成 =================================================
 # AppData\Localの中にGpuPowerSaverというフォルダを生成。すでにあったらそのまま-------
 MyLocalPath = os.path.expanduser("~\AppData\Local\GpuPowerSaver")
 os.makedirs(MyLocalPath, exist_ok=True)
@@ -213,6 +213,14 @@ Command += 'nvidia-smi -pl %1\n'
 SlaveBat.write(Command)                                                         # ファイル書き込み
 SlaveBat.close()                                                                # ファイルを閉じる
 
+# カスタム電力制限値が書かれたファイル --------------------------------------------
+CustomPowerSaveValuePath = os.path.expanduser("~\AppData\Local\GpuPowerSaver\CustomPowerSaveValue.txt")
+if not os.path.isfile(CustomPowerSaveValuePath):
+    CustomPowerSaveValueTxt = open(CustomPowerSaveValuePath, 'w')               # 上書きモードでファイル生成
+    CustomPowerSaveValueTxt.write("0")                                          # ファイル書き込み(初期値は0にしておく)
+    CustomPowerSaveValueTxt.close()                                             # ファイルを閉じる
+
+
 
 # ============================================= グラボの仕様を取得 ===============================================
 # 電力制限初期値(int)を取得
@@ -229,6 +237,22 @@ NowPowerLimit     = math.floor(float(subprocess.run(cmd, startupinfo=StartupInfo
 # 電力制限初期値よりも現在の電力制限値が小さかったら、電力制限ON状態にしておく
 if DefaultPowerLimit > NowPowerLimit:
     SW = True
+
+
+# ========================================== カスタム電力制限値を取得 ============================================
+# カスタム電力制限値(int)を取得。取得できなかったら0にする
+with open(CustomPowerSaveValuePath, "r") as f:
+    try:
+        CustomPowerSaveValue = math.floor(float(f.readlines()[0]))
+    except:
+        CustomPowerSaveValue = 0
+
+# 電力制限初期値よりもカスタム電力制限値に大きい値が設定されていたら電力制限初期値にする
+if DefaultPowerLimit <= CustomPowerSaveValue:
+    CustomPowerSaveValue = DefaultPowerLimit
+# 電力制限下限よりもカスタム電力制限値に小さい値が設定されていたら電力制限下限にする
+if MinimumPowerLimit >= CustomPowerSaveValue:
+    CustomPowerSaveValue = MinimumPowerLimit
 
 
 # =============================================== スレッド開始 ==================================================
